@@ -1,11 +1,11 @@
 
 
-There are two `main`s entries
+There are two main entries
 
-example.Hello reads data from data file
+`sbt runMain example.Hello` reads data from data file
  which was provided on "https://s3-ap-southeast-1.amazonaws.com/geeks.redmart.com/coding-problems/map.txt"
 
-example.HelloRandom generates its own data randomly at start
+`sbt runMain example.HelloRandom` generates its own data randomly at start
 
 The code runs on a single thread to get its standard speed and also the basic logic.
 
