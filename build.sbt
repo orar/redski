@@ -13,3 +13,4 @@ lazy val root = (project in file(".")).
       "com.typesafe.akka" %% "akka-stream" % "2.5.14"
     )
   )
+TaskKey[Unit]("runski") := (runMain in Compile).toTask(" com.example.Hello").value
