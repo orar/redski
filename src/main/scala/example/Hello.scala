@@ -37,18 +37,23 @@ trait SkiRouter {
   this: SkiMapper =>
 
   def run: Seq[Vertex] = {
-    val routes = slideThrough
+    val routes = slideThroughV2
     val maxTrailSize = routes.maxBy(_.trail.size).trail.size
-    routes.filter(_.trail.size == maxTrailSize).maxBy(_.steepFactor).vertexTrail
+    val longRoutes = routes.filter(_.trail.size == maxTrailSize).sortBy(_.steepFactor)
+    longRoutes.map(_.vertexTrail.map(_.value).mkString("-")).foreach(println)
+    longRoutes.last.vertexTrail
   }
 
   def dataLines: Stream[(String, Int)] = {
+    println("Fetching data file")
+
     val source = if (isLocalFile) Source.fromFile(new File(mapDataUri)) else Source.fromURL(mapDataUri)
-    source.getLines().toVector.tail.toStream.zipWithIndex
+
+    source.getLines().toStream.tail.zipWithIndex
   }
 
   /**
-    * Pad data lines to slide context over first and last row
+    * Pad data lines to slide in context over first and last row
     * @param dataStream
     * @return
     */
@@ -60,7 +65,7 @@ trait SkiRouter {
   }
 
   /**
-    * No recovery if any of data isnt an int
+    * No recovery if any of data points isnt an int
     * @param data
     * @return
     */
@@ -72,8 +77,8 @@ trait SkiRouter {
   }
 
   def printProgress(lines: Int, data: Option[Vertex]): Unit = {
-    val percent = data.map(v => (v.y / lines.toDouble) * 100 ).getOrElse(0)
-    val line = data.map(v => v.y )
+    val percent: Double = data.map(v => (v.y / lines.toDouble) * 100 ).getOrElse(0)
+    val line = data.map(v => v.y ).getOrElse(0)
     val message = f"Mine level: $percent%1.2f%%, $line of $lines lines"
    println(message)
   }
@@ -95,6 +100,38 @@ trait SkiRouter {
       printProgress(linesSize, data.headOption.flatMap(_.headOption))
       verticals
     }
+  }
+
+  /**
+    * Run through Vertexes
+    *
+    * @return
+    */
+  def slideThroughV2: Vector[SkiRoute] = {
+    val lines = dataLines
+    val linesSize = lines.size
+    println(s"Generating horizontal routes for $linesSize data lines")
+    val horizontalRoutes = padData(lines).map(toVertex).sliding(3, 1).map { v =>
+      val formed = formulateRoutes(data = v, ignoreYIndex = List(0, linesSize + 1))
+      printProgress(linesSize, formed.headOption.map(_.start))
+      linkHorizontalRoutesV2(formed)
+    }
+    val hRoutes = horizontalRoutes.toVector
+
+    println("Linking vertical routes")
+    routeVertical(hRoutes).flatten
+  }
+
+  /**
+    * Link vertical routes
+    *
+    * @return
+    */
+  @tailrec
+  private def routeVertical(routes: Vector[Vector[SkiRoute]]): Vector[Vector[SkiRoute]] = {
+    println(s"Reducing vertical routes from ${routes.size}")
+    val linked = routes.sliding(2, 2).toParArray.map(_.foldLeft(Vector[SkiRoute]())(linkVerticalRoutesV2)).toVector
+    if(linked.size != 1) routeVertical(linked) else linked
   }
 
   /**

@@ -19,9 +19,13 @@ class SkiSpec extends FlatSpec with Matchers with Inspectors {
     override def mapDataUri: String = "/home/orar/Documents/testredmap.txt"
 
     override def run: Seq[Vertex] = {
-      val routes = slideThrough
+      val routes = slideThroughV2
       val maxTrailSize = routes.maxBy(_.trail.size).trail.size
-      routes.filter(_.trail.size == maxTrailSize).maxBy(_.steepFactor).vertexTrail
+      val longRoutes = routes.filter(_.trail.size == maxTrailSize).sortBy(_.steepFactor)
+      maxTrailSize shouldBe 4
+      longRoutes.size shouldBe 2
+      longRoutes.map(_.vertexTrail.map(_.value).mkString("-")).foreach(println)
+      longRoutes.last.vertexTrail
     }
 
     val result = run.map(_.value).mkString("-")
